@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+#Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -133,6 +133,7 @@ venv.bak/
 # Spyder project settings
 .spyderproject
 .spyproject
+.idea/
 
 # Rope project settings
 .ropeproject
