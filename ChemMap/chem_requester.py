@@ -94,12 +94,14 @@ class ChemRequester:
                                                                           excluded_ChEBI_IDs=compound_data["ChEBI"])
         return compound_data
 
-    def request_to_uniprot(self, smiles, chebi_IDs, old_reaction_data):
+    def request_to_uniprot(self, smiles, chebi_IDs, old_reaction_data, reference_reaction_data=None):
         reaction_query = uniprot_query(chebi_IDs).replace("\n", " ")
         reaction_data_df = self.__execute_request(self.UNIPROT_ENDPOINT, self.__process_rhea_IDs,
                                                   params={"format": "json",
                                                           "query": reaction_query})
+        if reference_reaction_data is not None:
+            reaction_data_df = reaction_data_df[~reaction_data_df.rhea.isin(reference_reaction_data.rhea)]
         if not reaction_data_df.empty:
             reaction_data_df.insert(0, "smiles", smiles)
             old_reaction_data += reaction_data_df.to_dict("records")
-        return reaction_data_df
+            return reaction_data_df
