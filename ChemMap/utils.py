@@ -20,6 +20,17 @@ def is_valid_search_method(search_method):
                 raise ValueError(f"{search_method} is not a valid AllowedRequestMethods, allowed methods "
                                  f"are {[meth.value for meth in AllowedRequestMethods]}")
 
+
+def add_or_append_values_to_dict(new_dictionary, reference_dictionary, empty_dictionary=None):
+        for key, values in new_dictionary.items():
+            for value in values:
+                if not value in reference_dictionary[key]:
+                    if empty_dictionary:
+                        empty_dictionary[key].append(value)
+                    else:
+                        reference_dictionary[key].append(value)
+        return empty_dictionary
+
 def expand_search_chebi(chebi_id):
         ce = ChebiEntity(chebi_id)
         outgoings = ce.get_outgoings()
@@ -31,11 +42,16 @@ def expand_search_chebi(chebi_id):
 
 def uniprot_query(ChEBiIDs):
         return ("PREFIX rh: <http://rdf.rhea-db.org/>\nPREFIX CHEBI: <http://purl.obolibrary.org/obo/CHEBI_>\n "
-                "PREFIX up: <http://purl.uniprot.org/core/> \n"
-            " SELECT Distinct ?rhea ?ecNumber ?protein\n"
-            "WHERE { \n ?rhea rh:side ?reactionSide1 . \n ?reactionSide1  rh:contains / rh:compound / rh:chebi "
-            "?chebi .\n ?reactionSide1 rh:transformableTo ?reactionSide2 .\n "
-            "OPTIONAL{?rhea rh:ec ?ecNumber . \n"
-            "?protein ( up:enzyme | up:domain/up:enzyme | up:component/up:enzyme ) ?ecNumber . \n"
-            "?protein up:sequence ?isoform .}\n"
-            "VALUES (?chebi) {" + " ".join(["(" + ChEBiID + ")" for ChEBiID in ChEBiIDs]) + "}\n}")
+                "PREFIX up: <http://purl.uniprot.org/core/>\n"
+                "SELECT Distinct ?rhea ?ecNumber ?protein\n"
+                "WHERE { \n ?rhea rh:side ?reactionSide1 . \n ?reactionSide1  rh:contains / rh:compound / rh:chebi "
+                "?chebi .\n ?reactionSide1 rh:transformableTo ?reactionSide2 .\n "
+                "OPTIONAL{ ?ca up:catalyzedReaction ?rhea . \n "
+                "?protein up:annotation/up:catalyticActivity ?ca .}\n "
+                "OPTIONAL{?rhea rh:ec ?ecNumber . \n "
+                "?protein ( up:enzyme | up:domain/up:enzyme | up:component/up:enzyme ) ?ecNumber . }\n "
+                "VALUES (?chebi) {" + " ".join(["(" + ChEBiID + ")" for ChEBiID in ChEBiIDs]) + "}\n}")
+
+
+if __name__ == "__main__":
+    print(uniprot_query(["CHEBI:116509"]))
