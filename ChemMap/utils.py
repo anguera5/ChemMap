@@ -22,13 +22,13 @@ def is_valid_search_method(search_method):
 
 
 def add_or_append_values_to_dict(new_dictionary, reference_dictionary, empty_dictionary=None):
-        for key, values in new_dictionary.items():
-            for value in values:
-                if not value in reference_dictionary[key]:
-                    if empty_dictionary:
-                        empty_dictionary[key].append(value)
-                    else:
-                        reference_dictionary[key].append(value)
+        for key in new_dictionary.keys():
+            subset_diff = set(new_dictionary[key]) - set(reference_dictionary[key])
+            for value in subset_diff:
+                if empty_dictionary:
+                    empty_dictionary[key].append(value)
+                else:
+                    reference_dictionary[key].append(value)
         return empty_dictionary
 
 def expand_search_chebi(chebi_id):
