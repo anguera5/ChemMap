@@ -29,12 +29,13 @@ class ChemMap:
 
             self.compound_data[parent_smiles] = self.requester.request_pubchem_and_chebi(parent_smiles, search_method)
 
-            if chebi_IDs := self.compound_data[parent_smiles].get("ChEBI"):
-                self.requester.request_to_uniprot(parent_smiles, chebi_IDs, self.reaction_data)
+            chebi_IDs = self.compound_data[parent_smiles].get("ChEBI")
+            current_reaction_data = self.requester.request_to_uniprot(parent_smiles, chebi_IDs, self.reaction_data)
 
             if search_method in [AllowedRequestMethods.EXPAND_ALL.value, AllowedRequestMethods.EXPAND_PUBCHEM.value]:
-                if chebi_IDs := self.compound_data[parent_smiles]["related_results"].get("ChEBI"):
-                    self.requester.request_to_uniprot(parent_smiles, chebi_IDs, self.similar_reaction_data)
+                chebi_IDs = self.compound_data[parent_smiles].get("ChEBI")
+                self.requester.request_to_uniprot(parent_smiles, chebi_IDs, self.similar_reaction_data,
+                                                  reference_reaction_data=current_reaction_data)
 
         smiles_list = list(self.compound_data.keys())
         compound_data_df = pd.json_normalize([self.compound_data[key] for key in smiles_list])
