@@ -32,13 +32,15 @@ def add_or_append_values_to_dict(new_dictionary, reference_dictionary, empty_dic
         return empty_dictionary
 
 def expand_search_chebi(chebi_id):
-        ce = ChebiEntity(chebi_id)
-        outgoings = ce.get_outgoings()
-        outgoings_of_interest = []
-        for outgoing in outgoings:
-            if outgoing.get_type() in [relation.value for relation in AllowedChEBIRelations]:
-                outgoings_of_interest.append(outgoing.get_target_chebi_id())
-        return outgoings_of_interest
+    # TODO: This can break if new substances are to be added to ChEBI, is there a way to check if the dbs has been
+    #  updated? Maybe I could then download only if an error happens when trying to fetch ID if dbs is outdated
+    ce = ChebiEntity(chebi_id)
+    outgoings = ce.get_outgoings()
+    outgoings_of_interest = []
+    for outgoing in outgoings:
+        if outgoing.get_type() in [relation.value for relation in AllowedChEBIRelations]:
+            outgoings_of_interest.append(outgoing.get_target_chebi_id())
+    return outgoings_of_interest
 
 def uniprot_query(ChEBiIDs):
         return ("PREFIX rh: <http://rdf.rhea-db.org/>\nPREFIX CHEBI: <http://purl.obolibrary.org/obo/CHEBI_>\n "
