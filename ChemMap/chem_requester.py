@@ -1,20 +1,17 @@
-import os
 import requests
 import re
 from time import sleep
 
-from datetime import datetime
-from libchebipy import ChebiEntity
 import numpy as np
 import pandas as pd
 
-from ChemMap.utils import is_valid_search_method, is_valid_smiles, expand_search_chebi
-from enums import AllowedRequestMethods, AllowedChEBIRelations
+from ChemMap.utils import expand_search_chebi, add_or_append_values_to_dict
+from enums import AllowedRequestMethods
 from utils import uniprot_query
 
 class ChemRequester:
     PUBCHEM_REST_SMILES_INPUT = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/synonyms/JSON"
-    PUBCHEM_REST_SIMILARITY_OPERATION = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/synonyms/JSON"
+    PUBCHEM_REST_SIMILARITY_OPERATION = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastsimilarity_2d/smiles/synonyms/JSON"
     PUBCHEM_REST_REGISTRY_INPUT = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/xrefs/RegistryID/JSON"
     UNIPROT_ENDPOINT = "https://sparql.uniprot.org/sparql/"
 
@@ -76,22 +73,15 @@ class ChemRequester:
                                               params={"smiles": smiles})
         compound_data_temp = self.__execute_request(self.PUBCHEM_REST_REGISTRY_INPUT, self.__process_pubchem_synonyms,
                                                     params={"smiles": smiles})
-        for key,values in compound_data_temp.items():
-            for value in values:
-                if not value in compound_data[key]:
-                    compound_data[key].append(value)
+        add_or_append_values_to_dict(new_dictionary=compound_data_temp, reference_dictionary=compound_data)
         if (search_method == AllowedRequestMethods.EXPAND_PUBCHEM.value or
                 search_method == AllowedRequestMethods.EXPAND_ALL.value):
             # Expand search according to CID match
             temp_related_results = self.__execute_request(self.PUBCHEM_REST_SIMILARITY_OPERATION,
                                                           self.__process_pubchem_synonyms, params={"smiles": smiles})
-            related_results = {"CID": [], "ChEBI": []}
-            # Add CID and ChEBI entries if not existing in main entry
-            for key, value in temp_related_results.items():
-                for value in values:
-                    if not value in compound_data[key]:
-                        compound_data[key].append(value)
-            compound_data["related_results"] = related_results
+            compound_data["related_results"] = add_or_append_values_to_dict(new_dictionary=temp_related_results,
+                                                                            reference_dictionary=compound_data,
+                                                                            empty_dictionary={"CID": [], "ChEBI": []})
         if (search_method == AllowedRequestMethods.EXPAND_CHEBI.value or
                 search_method == AllowedRequestMethods.EXPAND_ALL.value):
             compound_data["ChEBI"] = self.expand_chebi(compound_data["ChEBI"])
@@ -102,9 +92,10 @@ class ChemRequester:
         return compound_data
 
     def request_to_uniprot(self, smiles, chebi_IDs, old_reaction_data):
+        reaction_query = uniprot_query(chebi_IDs).replace("\n", " ")
         reaction_data_df = self.__execute_request(self.UNIPROT_ENDPOINT, self.__process_rhea_IDs,
                                                   params={"format": "json",
-                                                          "query": uniprot_query(chebi_IDs).replace("\n", " ")})
+                                                          "query": reaction_query})
         if not reaction_data_df.empty:
             reaction_data_df.insert(0, "smiles", smiles)
             old_reaction_data += reaction_data_df.to_dict("records")
