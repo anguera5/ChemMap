@@ -45,12 +45,14 @@ class ChemRequester:
                         chebi_ids.add(term)
         return {"CID": cids, "ChEBI": list(chebi_ids)}
 
-    def expand_chebi(self, ChEBI_IDs):
+    def expand_chebi(self, ChEBI_IDs, excluded_ChEBI_IDs=None):
         unique_chebi_ids = set(ChEBI_IDs)
         # If expand_chebi or expand_all methods are specified then expand results on ChEBI's side
         for chebi_id in ChEBI_IDs:
             for expanded_chebi_id in expand_search_chebi(chebi_id):
                 unique_chebi_ids.add(expanded_chebi_id)
+        if excluded_ChEBI_IDs:
+            unique_chebi_ids = unique_chebi_ids - set(excluded_ChEBI_IDs)
         return list(unique_chebi_ids)
 
     def __process_rhea_IDs(self, response):
@@ -88,7 +90,8 @@ class ChemRequester:
 
         if search_method == AllowedRequestMethods.EXPAND_ALL.value:
             # First update chebi IDs and rhea IDs of similar structures
-            compound_data["related_results"]["ChEBI"] = self.expand_chebi(compound_data["related_results"]["ChEBI"])
+            compound_data["related_results"]["ChEBI"] = self.expand_chebi(compound_data["related_results"]["ChEBI"],
+                                                                          excluded_ChEBI_IDs=compound_data["ChEBI"])
         return compound_data
 
     def request_to_uniprot(self, smiles, chebi_IDs, old_reaction_data):
