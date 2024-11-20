@@ -2,6 +2,7 @@ import os
 
 from datetime import datetime
 import pandas as pd
+from tqdm import tqdm
 
 from ChemMap.chem_requester import ChemRequester
 from ChemMap.utils import is_valid_search_method, is_valid_smiles
@@ -21,7 +22,7 @@ class ChemMap:
         is_valid_smiles(smiles)
         is_valid_search_method(search_method)
 
-        for parent_smiles in smiles:
+        for parent_smiles in tqdm(smiles):
             if parent_smiles in self.compound_data.keys():
                 # Skipping unnecessary requests
                 continue
