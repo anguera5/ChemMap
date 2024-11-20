@@ -1,17 +1,11 @@
 import os
-import requests
-import re
-from time import sleep
 
 from datetime import datetime
-from libchebipy import ChebiEntity
-import numpy as np
 import pandas as pd
 
 from ChemMap.chem_requester import ChemRequester
-from ChemMap.utils import is_valid_search_method, is_valid_smiles, expand_search_chebi
-from enums import AllowedRequestMethods, AllowedChEBIRelations
-from utils import uniprot_query
+from ChemMap.utils import is_valid_search_method, is_valid_smiles
+from enums import AllowedRequestMethods
 
 class ChemMap:
     def __init__(self):
@@ -62,9 +56,7 @@ class ChemMap:
         return compound_data_df, reaction_data_df, similar_reaction_data_df
 
 if __name__ == "__main__":
-    smiles = ["C1=C(N=C(S1)N=C(N)N)CSCC/C(=N/S(=O)(=O)N)/N"]
+    smiles = ["CN(C)C(=O)NC1=CC=C(C(=C1)Cl)Cl", "CC(C)C1=CC=C(C=C1)NC(=O)N(C)C"]
     search_method = "expand_all"
     cm = ChemMap()
     print(cm.map_smiles_to_proteins(smiles, search_method="expand_all"))
-    # df, rd, srd = cm.map_smiles_to_proteins(smiles, search_method)
-
