@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from ChemMap.chem_requester import ChemRequester
 from ChemMap.utils import is_valid_search_method, is_valid_smiles
-from enums import AllowedRequestMethods
+from ChemMap.enums import AllowedRequestMethods
 
 class ChemMap:
     def __init__(self):
