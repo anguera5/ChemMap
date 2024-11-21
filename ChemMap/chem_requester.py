@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 
 from ChemMap.utils import expand_search_chebi, add_or_append_values_to_dict
-from enums import AllowedRequestMethods
-from utils import uniprot_query
+from ChemMap.enums import AllowedRequestMethods
+from ChemMap.utils import uniprot_query
 
 class ChemRequester:
     PUBCHEM_REST_SMILES_INPUT = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/synonyms/JSON"
@@ -95,6 +95,7 @@ class ChemRequester:
         return compound_data
 
     def request_to_uniprot(self, smiles, chebi_IDs, old_reaction_data, reference_reaction_data=None):
+        # TODO: Enable chunk based queries, this should improved request times
         reaction_query = uniprot_query(chebi_IDs).replace("\n", " ")
         reaction_data_df = self.__execute_request(self.UNIPROT_ENDPOINT, self.__process_rhea_IDs,
                                                   params={"format": "json",
