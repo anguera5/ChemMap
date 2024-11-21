@@ -1,6 +1,6 @@
 from libchebipy import ChebiEntity
 from rdkit import Chem
-from enums import AllowedRequestMethods, AllowedChEBIRelations
+from ChemMap.enums import AllowedRequestMethods, AllowedChEBIRelations
 
 
 def is_valid_smiles(smiles):
