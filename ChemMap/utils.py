@@ -34,8 +34,8 @@ def is_valid_search_method(search_method: str):
                          f"are {[meth.value for meth in AllowedRequestMethods]}")
 
 
-def add_or_append_values_to_dict(new_dictionary: dict[str], reference_dictionary: dict[str],
-                                 empty_dictionary: Union[dict[str] | None] = None):
+def add_or_append_values_to_dict(new_dictionary: dict[str, list], reference_dictionary: dict[str, list],
+                                 empty_dictionary: Union[dict[str, list] | None] = None):
     """
     Given two dictionaries with identical set of keys "new_dictionary" and "reference_dictionary", it adds the
     values of "new_dictionary" that are not already on "reference_dictionary". Should an "empty_dictionary" be

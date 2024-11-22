@@ -1,3 +1,5 @@
+from typing import Union
+
 import requests
 import re
 from time import sleep
@@ -10,69 +12,24 @@ from ChemMap.enums import AllowedRequestMethods
 from ChemMap.utils import uniprot_query
 
 class ChemRequester:
+    """A class representing the requester side of ChemMap"""
     PUBCHEM_REST_SMILES_INPUT = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/synonyms/JSON"
     PUBCHEM_REST_SIMILARITY_OPERATION = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastsimilarity_2d/smiles/synonyms/JSON"
     PUBCHEM_REST_REGISTRY_INPUT = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/xrefs/RegistryID/JSON"
     UNIPROT_ENDPOINT = "https://sparql.uniprot.org/sparql/"
 
-    def __execute_request(self, url, handle_response, method="GET", params=None, back_off_time=0.2):
-        # Setting minimum back_off_time to 0.2s to ensure no more than 5 requests per second
-        # Read more here: https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest
-        if back_off_time < 0.2:
-            raise ValueError("Back off time must be greater than or equal to 0.2")
-        sleep(back_off_time)
-        back_off_time *= 10
-        response = requests.request(method=method, url=url, params=params)
-        if response.status_code != 200 and back_off_time > 20:
-            print(f"Execution stopped due to exceeding back off time on url: {response.url}")
-            return {"CID": [], "ChEBI": []}
-        elif response.status_code != 200:
-            print("Request failed, trying again with back off time = {} seconds".format(back_off_time))
-            return self.__execute_request(url, handle_response, method=method, params=params, back_off_time=back_off_time)
-        else:
-            return handle_response(response)
+    def request_pubchem_and_chebi(self, smiles: str, search_method: str):
+        """
+        Given a SMILES and search_method strings, this method delegates to the proper data workflow.
 
-    def __process_pubchem_synonyms(self, response):
-        cids = []
-        chebi_ids = set()
-        cid_to_synonyms = response.json().get('InformationList').get('Information')
-        for items in cid_to_synonyms:
-            if cid := items.get('CID'):
-                cids.append(cid)
-            if terms := items.get('Synonym') or items.get('RegistryID'):
-                for term in terms:
-                    if re.match("CHEBI:-?\\d+", term):
-                        chebi_ids.add(term)
-        return {"CID": cids, "ChEBI": list(chebi_ids)}
-
-    def expand_chebi(self, ChEBI_IDs, excluded_ChEBI_IDs=None):
-        unique_chebi_ids = set(ChEBI_IDs)
-        # If expand_chebi or expand_all methods are specified then expand results on ChEBI's side
-        for chebi_id in ChEBI_IDs:
-            for expanded_chebi_id in expand_search_chebi(chebi_id):
-                unique_chebi_ids.add(expanded_chebi_id)
-        if excluded_ChEBI_IDs:
-            unique_chebi_ids = unique_chebi_ids - set(excluded_ChEBI_IDs)
-        return list(unique_chebi_ids)
-
-    def __process_rhea_IDs(self, response):
-        df = pd.json_normalize(response.json()['results']['bindings'])
-        # No results
-        if df.empty:
-            return df
-        df.drop(columns=[column for column in df.columns if "type" in column], inplace=True)
-        df.columns = df.columns.str.replace(".value", "")
-        expected_columns = response.json()['head']['vars']
-        # Force the dataframe to have defined columns
-        df = df.reindex(columns=expected_columns, fill_value=np.nan)
-        # Handle together all cases
-        df = df.groupby(["rhea", "ecNumber"], dropna=False)["protein"].apply(lambda x: [] if pd.isna(x).any() else list(x), include_groups=False).reset_index()
-        return df
-
-    def request_pubchem_and_chebi(self, smiles, search_method):
+        :param smiles: a SMILES string
+        :param search_method: a string indicating a valid search method to use, according to AllowedRequestMethods
+        :return: A dictionary containing all the extracted
+         data for this compound
+        """
         # Using exact match SMILES method
         compound_data = self.__execute_request(self.PUBCHEM_REST_SMILES_INPUT, self.__process_pubchem_synonyms,
-                                              params={"smiles": smiles})
+                                               params={"smiles": smiles})
         compound_data_temp = self.__execute_request(self.PUBCHEM_REST_REGISTRY_INPUT, self.__process_pubchem_synonyms,
                                                     params={"smiles": smiles})
         add_or_append_values_to_dict(new_dictionary=compound_data_temp, reference_dictionary=compound_data)
@@ -91,13 +48,24 @@ class ChemRequester:
         if search_method == AllowedRequestMethods.EXPAND_ALL.value:
             # First update chebi IDs and rhea IDs of similar structures
             compound_data["related_results"]["ChEBI"] = self.expand_chebi(compound_data["related_results"]["ChEBI"],
-                                                                          excluded_ChEBI_IDs=compound_data["ChEBI"])
+                                                                          excluded_chebi_ids=compound_data["ChEBI"])
         return compound_data
 
-    def request_to_uniprot(self, smiles, chebi_IDs, old_reaction_data, reference_reaction_data=None):
+    def request_to_uniprot(self, smiles: str, chebi_ids: list[str],
+                           old_reaction_data: pd.DataFrame, reference_reaction_data: Union[pd.DataFrame | None]=None):
+        """
+        Method to perform a request to uniProt given a list of ChEBI IDs
+
+        :param smiles: the SMILES for which the request is being performed
+        :param chebi_ids: the ChEBI IDs for that given SMILES
+        :param old_reaction_data: a dataframe containing all the stored reaction data until now
+        :param reference_reaction_data: None or a dataframe, in which case only the data not present in
+            reference_reaction_data will be added to the output
+        :return: None or a non-empty reaction dataframe
+        """
         # TODO: Enable chunk based queries, this should improved request times
-        reaction_query = uniprot_query(chebi_IDs).replace("\n", " ")
-        reaction_data_df = self.__execute_request(self.UNIPROT_ENDPOINT, self.__process_rhea_IDs,
+        reaction_query = uniprot_query(chebi_ids).replace("\n", " ")
+        reaction_data_df = self.__execute_request(self.UNIPROT_ENDPOINT, self.__process_uniprot_IDs,
                                                   params={"format": "json",
                                                           "query": reaction_query})
         if reference_reaction_data is not None:
@@ -106,3 +74,91 @@ class ChemRequester:
             reaction_data_df.insert(0, "smiles", smiles)
             old_reaction_data += reaction_data_df.to_dict("records")
             return reaction_data_df
+
+    @staticmethod
+    def expand_chebi(chebi_ids: list[str], excluded_chebi_ids: Union[list[str] | None]=None):
+        """
+        Expands the ChEBI IDs provided in a list according to AllowedChEBIRelations
+
+        :param chebi_ids: a list of ChEBI IDs
+        :param excluded_chebi_ids: a list of ChEBI IDs to exclude
+        :return: A list of non-repeated ChEBI IDs
+        """
+        unique_chebi_ids = set(chebi_ids)
+        for chebi_id in chebi_ids:
+            for expanded_chebi_id in expand_search_chebi(chebi_id):
+                unique_chebi_ids.add(expanded_chebi_id)
+        if excluded_chebi_ids:
+            unique_chebi_ids = unique_chebi_ids - set(excluded_chebi_ids)
+        return list(unique_chebi_ids)
+
+    def __execute_request(self, url: str, handle_response: callable, method: str="GET", params: Union[dict[str, str], None]=None,
+                          back_off_time:int=0.2):
+        """
+        The general method to generate requests internally. The method expects a URL and a method to handle the response
+        if the request has a status_code==200.
+
+        In order to fulfill PubChem's requirements on maximum number of requests per second, I set up a minimum
+        back_off_time to 0.2s. Read more here: https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest
+
+        :param url: A string indicating the endpoint for the request
+        :param handle_response: a function that handles the response when the request has status code 200
+        :param method: the method of the request, since we are retrieving data this is always "GET"
+        :param params: a dictionary of parameters for the request
+        :param back_off_time: the number of seconds to back off after each failed request.
+        :return: the preprocessed response
+        """
+        if back_off_time < 0.2:
+            raise ValueError("Back off time must be greater than or equal to 0.2")
+        sleep(back_off_time)
+        back_off_time *= 10
+        response = requests.request(method=method, url=url, params=params)
+        if response.status_code != 200 and back_off_time > 20:
+            print(f"Execution stopped due to exceeding back off time on url: {response.url}")
+            return {"CID": [], "ChEBI": []}
+        elif response.status_code != 200:
+            print("Request failed, trying again with back off time = {} seconds".format(back_off_time))
+            return self.__execute_request(url, handle_response, method=method, params=params, back_off_time=back_off_time)
+        else:
+            return handle_response(response)
+
+    @staticmethod
+    def __process_pubchem_synonyms(response: requests.Response):
+        """
+        Handler for PubChem request
+
+        :param response: the response from the request
+        :return: a dictionary containing the CIDs and the ChEBI IDs found on the PubChem endpoint for the given request
+        """
+        cids = []
+        chebi_ids = set()
+        cid_to_synonyms = response.json().get('InformationList').get('Information')
+        for items in cid_to_synonyms:
+            if cid := items.get('CID'):
+                cids.append(cid)
+            if terms := items.get('Synonym') or items.get('RegistryID'):
+                for term in terms:
+                    if re.match("CHEBI:-?\\d+", term):
+                        chebi_ids.add(term)
+        return {"CID": cids, "ChEBI": list(chebi_ids)}
+
+    @staticmethod
+    def __process_uniprot_IDs(response: requests.Response):
+        """
+        Handler for uniProt request
+
+        :param response: the response from the request
+        :return: a dataframe containing the rhea, ecNumber and proteins found on the UniProt endpoint for the given request
+        """
+        df = pd.json_normalize(response.json()['results']['bindings'])
+        # No results
+        if df.empty:
+            return df
+        df.drop(columns=[column for column in df.columns if "type" in column], inplace=True)
+        df.columns = df.columns.str.replace(".value", "")
+        expected_columns = response.json()['head']['vars']
+        # Force the dataframe to have defined columns
+        df = df.reindex(columns=expected_columns, fill_value=np.nan)
+        # Handle together all cases
+        df = df.groupby(["rhea", "ecNumber"], dropna=False)["protein"].apply(lambda x: [] if pd.isna(x).any() else list(x), include_groups=False).reset_index()
+        return df
