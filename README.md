@@ -1,4 +1,13 @@
 # ChemMap
+
+[ChemMap in a Nutshell](#chemmap-in-a-nutshell)
+
+[How to Download](#how-to-download)
+
+[How to Use](#how-to-use)
+
+## ChemMap in a Nutshell
+
 ChemMap is a Python library that tries to bridge the gap from metabolomics to proteomics using existing databases.
 A sketch of the main method of ChemMap can be found on the following diagram.
 
@@ -58,4 +67,18 @@ activate it and install the local requirements
 conda activate <my-env>
 cd <path_to_CheMap>/ChemMap
 pip install -r requirements.txt
+```
+
+## How to Use
+
+A minimal use case would look as follows. We are interested in knowing all the chemical identifiers and its reactions
+for Aspirin. A quick Google search will show us that the SMILES for Aspirin is `CC(=O)OC1=CC=CC=C1C(=O)O`
+
+```python
+from ChemMap.chem_map import ChemMap
+
+smiles = "CC(=O)OC1=CC=CC=C1C(=O)O"
+search_method = "expand_all"
+cm = ChemMap()
+cm.map_smiles_to_proteins(smiles, search_method="expand_all")
 ```
