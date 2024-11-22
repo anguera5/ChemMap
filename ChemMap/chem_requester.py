@@ -51,8 +51,8 @@ class ChemRequester:
                                                                           excluded_chebi_ids=compound_data["ChEBI"])
         return compound_data
 
-    def request_to_uniprot(self, smiles: str, chebi_ids: list[str],
-                           old_reaction_data: pd.DataFrame, reference_reaction_data: Union[pd.DataFrame | None]=None):
+    def request_to_uniprot(self, smiles: str, chebi_ids: list[str], old_reaction_data: list[dict],
+                           reference_reaction_data: Union[pd.DataFrame | None]=None):
         """
         Method to perform a request to uniProt given a list of ChEBI IDs
 
