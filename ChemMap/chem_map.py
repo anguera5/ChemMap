@@ -45,11 +45,11 @@ class ChemMap:
 
             self.compound_data[parent_smiles] = self.requester.request_pubchem_and_chebi(parent_smiles, search_method)
 
-            chebi_ids = self.compound_data[parent_smiles].get("ChEBI")
+            chebi_ids = self.compound_data[parent_smiles]["ChEBI"]
             current_reaction_data = self.requester.request_to_uniprot(parent_smiles, chebi_ids, self.reaction_data)
 
             if search_method in [AllowedRequestMethods.EXPAND_ALL.value, AllowedRequestMethods.EXPAND_PUBCHEM.value]:
-                chebi_ids = self.compound_data[parent_smiles].get("ChEBI")
+                chebi_ids = self.compound_data[parent_smiles]["related_results"]["ChEBI"]
                 self.requester.request_to_uniprot(parent_smiles, chebi_ids, self.similar_reaction_data,
                                                   reference_reaction_data=current_reaction_data)
 
@@ -62,7 +62,10 @@ class ChemMap:
         self.__reset()
         if to_tsv:
             folder_name = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            path = os.getcwd() + "/" + folder_name
+            current_path = os.getcwd()
+            if not "data" in os.listdir(current_path):
+                os.mkdir(current_path + "/data/")
+            path = current_path + "/data/" + folder_name
             os.mkdir(path)
             print(f"Saving files on the following path {path}")
             compound_data_df.to_csv(f"{path}/compounds_data.tsv", sep="\t")
