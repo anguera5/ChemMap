@@ -26,6 +26,11 @@ UniProt protein identifier, if available. On the background we are using the [Un
 the fact that Rhea and UniProt are synchronized on every UniProt release (more 
 [here](https://www.uniprot.org/help/synchronization)).
 
+The output of this process are 3 dataframes that contain, compound data (as explained in the first and second phases),
+reaction data (last step) and reaction data of similar structures, respectively. Should the `to_tsv` parameter
+be passed to the method, the data will then be saved on a folder with name corresponding to the date and time up to the
+second.
+
 ## How to Download
 
 This library can be downloaded through pip 
@@ -40,3 +45,17 @@ or by direct clone using
 git clone git@github.com:anguera5/ChemMap.git
 ```
 
+create a python3.10 environment, with
+[Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html#regular-installation) for example.
+
+```conda
+conda create --name <my-env> python=3.10
+```
+
+activate it and install the local requirements 
+
+```
+conda activate <my-env>
+cd <path_to_CheMap>/ChemMap
+pip install -r requirements.txt
+```
