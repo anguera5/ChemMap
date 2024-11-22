@@ -1,18 +1,20 @@
 # ChemMap
 
-[ChemMap in a Nutshell](#chemmap-in-a-nutshell)
+ChemMap is a Python library that tries to bridge the gap from metabolomics to proteomics using existing databases.
 
-[How to Download](#how-to-download)
-
-[How to Use](#how-to-use)
+| Table of Contents | 
+| ----------------- |
+|[ChemMap in a Nutshell](#chemmap-in-a-nutshell)|
+|[How to Download](#how-to-download)|
+|[How to Use](#how-to-use)|
 
 ## ChemMap in a Nutshell
 
-ChemMap is a Python library that tries to bridge the gap from metabolomics to proteomics using existing databases.
+
 A sketch of the main method of ChemMap can be found on the following diagram.
 
 | ![app_schema.png](assets/app_schema.png) | 
-|:----------------------------------------:| 
+| :--------------------------------------: | 
 | *Schema showing the workflow of ChemMap* |
 
 The main functionality of ChemMap, the function `map_smiles_to_proteins`, accepts a 
