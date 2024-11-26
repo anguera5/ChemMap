@@ -68,9 +68,9 @@ class ChemRequester:
         reaction_data_df = self.__execute_request(self.UNIPROT_ENDPOINT, self.__process_uniprot_IDs,
                                                   params={"format": "json",
                                                           "query": reaction_query})
-        if reference_reaction_data is not None:
-            reaction_data_df = reaction_data_df[~reaction_data_df.rhea.isin(reference_reaction_data.rhea)]
         if not reaction_data_df.empty:
+            if reference_reaction_data is not None:
+                reaction_data_df = reaction_data_df[~reaction_data_df.rhea.isin(reference_reaction_data.rhea)]
             reaction_data_df.insert(0, "smiles", smiles)
             old_reaction_data += reaction_data_df.to_dict("records")
             return reaction_data_df
