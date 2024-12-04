@@ -13,10 +13,16 @@ from ChemMap.utils import uniprot_query
 
 class ChemRequester:
     """A class representing the requester side of ChemMap"""
-    PUBCHEM_REST_SMILES_INPUT = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/synonyms/JSON"
-    PUBCHEM_REST_SIMILARITY_OPERATION = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/fastsimilarity_2d/smiles/synonyms/JSON"
-    PUBCHEM_REST_REGISTRY_INPUT = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/smiles/xrefs/RegistryID/JSON"
-    UNIPROT_ENDPOINT = "https://sparql.uniprot.org/sparql/"
+    PUBCHEM_COMPOUND_DOMAIN = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound"
+    PUBCHEM_SMILES_NAMESPACE = "/smiles"
+    PUBCHEM_2D_SIMILARITY_NAMESPACE = "/fastsimilarity_2d"
+    PUBCHEM_XREFS_NAMESPACE = "/xrefs"
+
+    PUBCHEM_REST_PROPERTY_OPERATION = "/property"
+    PUBCHEM_SYNONYMS_OPERATION = "/synonyms"
+
+    PUBCHEM_JSON_OUTPUT = "/JSON"
+    UNIPROT_SPARQL_ENDPOINT = "https://sparql.uniprot.org/sparql/"
 
     def request_pubchem_and_chebi(self, smiles: str, search_method: str):
         """
@@ -27,17 +33,21 @@ class ChemRequester:
         :return: A dictionary containing all the extracted
          data for this compound
         """
+        url = (self.PUBCHEM_COMPOUND_DOMAIN + self.PUBCHEM_SMILES_NAMESPACE + self.PUBCHEM_SYNONYMS_OPERATION +
+               self.PUBCHEM_JSON_OUTPUT)
         # Using exact match SMILES method
-        compound_data = self.__execute_request(self.PUBCHEM_REST_SMILES_INPUT, self.__process_pubchem_synonyms,
+        compound_data = self.__execute_request(url, self.__process_pubchem_synonyms,
                                                params={"smiles": smiles})
-        compound_data_temp = self.__execute_request(self.PUBCHEM_REST_REGISTRY_INPUT, self.__process_pubchem_synonyms,
-                                                    params={"smiles": smiles})
+        url = (self.PUBCHEM_COMPOUND_DOMAIN + self.PUBCHEM_SMILES_NAMESPACE + self.PUBCHEM_XREFS_NAMESPACE +
+               self.PUBCHEM_JSON_OUTPUT)
+        compound_data_temp = self.__execute_request(url, self.__process_pubchem_synonyms, params={"smiles": smiles})
         add_or_append_values_to_dict(new_dictionary=compound_data_temp, reference_dictionary=compound_data)
         if (search_method == AllowedRequestMethods.EXPAND_PUBCHEM.value or
                 search_method == AllowedRequestMethods.EXPAND_ALL.value):
             # Expand search according to CID match
-            temp_related_results = self.__execute_request(self.PUBCHEM_REST_SIMILARITY_OPERATION,
-                                                          self.__process_pubchem_synonyms, params={"smiles": smiles})
+            url = (self.PUBCHEM_COMPOUND_DOMAIN + self.PUBCHEM_2D_SIMILARITY_NAMESPACE + self.PUBCHEM_SMILES_NAMESPACE +
+                   self.PUBCHEM_SYNONYMS_OPERATION + self.PUBCHEM_JSON_OUTPUT)
+            temp_related_results = self.__execute_request(url, self.__process_pubchem_synonyms, params={"smiles": smiles})
             compound_data["related_results"] = add_or_append_values_to_dict(new_dictionary=temp_related_results,
                                                                             reference_dictionary=compound_data,
                                                                             empty_dictionary={"CID": [], "ChEBI": []})
@@ -65,7 +75,7 @@ class ChemRequester:
         """
         # TODO: Enable chunk based queries, this should improved request times
         reaction_query = uniprot_query(chebi_ids).replace("\n", " ")
-        reaction_data_df = self.__execute_request(self.UNIPROT_ENDPOINT, self.__process_uniprot_IDs,
+        reaction_data_df = self.__execute_request(self.UNIPROT_SPARQL_ENDPOINT, self.__process_uniprot_IDs,
                                                   params={"format": "json",
                                                           "query": reaction_query})
         if not reaction_data_df.empty:
