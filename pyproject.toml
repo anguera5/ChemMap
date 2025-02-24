@@ -1,0 +1,33 @@
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "chem-map"
+version = "0.0.1"
+authors = [
+  { name="Albert Anguera Sempere", email="albert.anguera.sempere@gmail.com" },
+]
+description = "a Python library that automatically annotates metabolomics data with proteomics/metagenomics metadata using existing databases."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "pandas (>=2.2.3,<3.0.0)",
+    "libchebipy (>=1.0.10,<2.0.0)",
+    "numpy (>=2.2.3,<3.0.0)",
+    "requests (>=2.32.3,<3.0.0)",
+    "rdkit (>=2024.9.5,<2025.0.0)",
+    "tqdm (>=4.67.1,<5.0.0)"
+]
+
+[tool.poetry]
+packages = [
+    { include = "ChemMap"}
+]
+
+[project.urls]
+Homepage = "https://github.com/anguera5/ChemMap"
