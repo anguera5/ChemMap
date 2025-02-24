@@ -18,6 +18,7 @@ class ChemRequester:
     PUBCHEM_2D_SIMILARITY_NAMESPACE = "/fastsimilarity_2d"
     PUBCHEM_XREFS_NAMESPACE = "/xrefs"
 
+    PUBCHEM_REGISTRY_OPERATION = "/RegistryID"
     PUBCHEM_REST_PROPERTY_OPERATION = "/property"
     PUBCHEM_SYNONYMS_OPERATION = "/synonyms"
 
@@ -36,10 +37,9 @@ class ChemRequester:
         url = (self.PUBCHEM_COMPOUND_DOMAIN + self.PUBCHEM_SMILES_NAMESPACE + self.PUBCHEM_SYNONYMS_OPERATION +
                self.PUBCHEM_JSON_OUTPUT)
         # Using exact match SMILES method
-        compound_data = self.__execute_request(url, self.__process_pubchem_synonyms,
-                                               params={"smiles": smiles})
+        compound_data = self.__execute_request(url, self.__process_pubchem_synonyms, params={"smiles": smiles})
         url = (self.PUBCHEM_COMPOUND_DOMAIN + self.PUBCHEM_SMILES_NAMESPACE + self.PUBCHEM_XREFS_NAMESPACE +
-               self.PUBCHEM_JSON_OUTPUT)
+               self.PUBCHEM_REGISTRY_OPERATION + self.PUBCHEM_JSON_OUTPUT)
         compound_data_temp = self.__execute_request(url, self.__process_pubchem_synonyms, params={"smiles": smiles})
         add_or_append_values_to_dict(new_dictionary=compound_data_temp, reference_dictionary=compound_data)
         if (search_method == AllowedRequestMethods.EXPAND_PUBCHEM.value or
@@ -85,6 +85,25 @@ class ChemRequester:
             old_reaction_data += reaction_data_df.to_dict("records")
             return reaction_data_df
 
+    def request_pubchem_properties(self, smiles: str, properties: Union[str | list[str]]):
+        """
+        Given a SMILES and search_method strings, this method delegates to the proper data workflow.
+
+        :param smiles: a SMILES string or a list of SMILES strings
+        :param properties: a valid property of PubChem compounds or a list of them (read more
+            here: https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest#section=Compound-Property-Tables)
+        :return: A dictionary containing all the extracted
+         data for this compound
+        """
+        if isinstance(properties, str):
+            properties = [properties]
+        url = (self.PUBCHEM_COMPOUND_DOMAIN + self.PUBCHEM_SMILES_NAMESPACE + self.PUBCHEM_REST_PROPERTY_OPERATION +
+               "/" + ",".join(properties) + self.PUBCHEM_JSON_OUTPUT)
+        # Using exact match SMILES method
+        compound_data = self.__execute_request(url, self.__process_pubchem_properties,
+                                               params={"smiles": smiles})
+        return compound_data
+
     @staticmethod
     def expand_chebi(chebi_ids: list[str], excluded_chebi_ids: Union[list[str] | None]=None):
         """
@@ -127,8 +146,12 @@ class ChemRequester:
             print(f"Execution stopped due to exceeding back off time on url: {response.url}")
             return {"CID": [], "ChEBI": []}
         elif response.status_code != 200:
-            print("Request failed, trying again with back off time = {} seconds".format(back_off_time))
-            return self.__execute_request(url, handle_response, method=method, params=params, back_off_time=back_off_time)
+            print(f"Request with status code {response.status_code} failed with error message {response.reason}")
+            if 500 <= response.status_code < 600:
+                print("trying again with back off time = {} seconds".format(back_off_time))
+                return self.__execute_request(url, handle_response, method=method, params=params, back_off_time=back_off_time)
+            else:
+                response.raise_for_status()
         else:
             return handle_response(response)
 
@@ -151,6 +174,20 @@ class ChemRequester:
                     if re.match("CHEBI:-?\\d+", term):
                         chebi_ids.add(term)
         return {"CID": cids, "ChEBI": list(chebi_ids)}
+
+    @staticmethod
+    def __process_pubchem_properties(response: requests.Response):
+        """
+        Handler for property PubChem request
+
+        :param response: the response from the request
+        :return: a list containing dictionaries with the properties found on the PubChem endpoint for the given request
+        """
+        output = []
+        cid_to_synonyms = response.json().get('PropertyTable').get('Properties')
+        for items in cid_to_synonyms:
+            output.append(items)
+        return output
 
     @staticmethod
     def __process_uniprot_IDs(response: requests.Response):
