@@ -50,25 +50,17 @@ This library can be downloaded through pip
 pip install chemmap
 ```
 
-or by direct clone using
+or by direct clone using git 
 
 ```bash
 git clone git@github.com:anguera5/ChemMap.git
 ```
 
-create a python3.10 environment, with
-[Conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html#regular-installation) for example.
+and installing the dependencies with [poetry](https://python-poetry.org/).
 
-```conda
-conda create --name <my-env> python=3.10
-```
-
-activate it and install the local requirements 
-
-```
-conda activate <my-env>
-cd <path_to_CheMap>/ChemMap
-pip install -r requirements.txt
+```bash
+cd ChemMap
+poetry env activate
 ```
 
 ## How to Use
@@ -80,7 +72,7 @@ for Aspirin. A quick Google search will show us that the SMILES for Aspirin is `
 from ChemMap.chem_map import ChemMap
 
 smiles = "CC(=O)OC1=CC=CC=C1C(=O)O"
-search_method = "expand_all"
+search_method = "expand_all" 
 cm = ChemMap()
-cm.map_smiles_to_proteins(smiles, search_method="expand_all")
+cm.map_smiles_to_proteins(smiles, search_method=search_method)
 ```
